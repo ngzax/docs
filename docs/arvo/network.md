@@ -339,7 +339,7 @@ urbit as for sending messages between apps on different urbits.
 -   Extend either of the apps in the first two exercises to accept input
     over the network in the same way as `pong`.
 
--   Modify `examples-pong` to print out a message when it receives
+-   Modify `pong` to print out a message when it receives
     acknowledgement.
 
 -   Write two apps, `even` and `odd`. When you pass an atom to `even`,
