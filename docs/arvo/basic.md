@@ -30,16 +30,16 @@ Make sure you've mounted your `%home` desk:
 ~fintud-macrep:dojo> |mount %
 ```
 
-Then, copy the example into it
+Then, clone the examples repo and copy its files into your urbit's mounted home dir:
 
 ```
-$ cp -r {urbit-examples}/gall/*/* {your-pier}/home/
-$ cp -r {urbit-examples}/dojo/*/* {your-pier}/home/
+$ git clone https://github.com/urbit/examples
+$ for dir in {app,gen,lib,mar,sec,sur,web}; do cp -r ./examples/$dir* /urbit/path/your-urbit/home; done
 ```
 
 Run an example to ensure it worked:
 
-    ~fintud-macrep:dojo> +examples-euler1
+    ~fintud-macrep:dojo> +project-euler/p1
     233.168
 
 Euler 1
@@ -53,20 +53,22 @@ Let's check out the code for Euler 1. First, the problem:
     Find the sum of all the multiples of 3 or 5 below 1000.
 
 Here is the hoon solution (which should be in your pier directory under
-`/gen/examples/euler1`):
+`/gen/project-euler/p1.hoon`):
 
-    ::    project euler 1
-    ::    https://projecteuler.net/problem=1
-    ::  run in dojo with +examples-euler1
+    ::  Project Euler 1
+    ::  https://projecteuler.net/problem=1
     ::
-    ::::  /hoon/euler1/examples/gen
+    ::  run in dojo with:
+    ::    ~your-urbit:dojo/examples> +project-euler/p1
+    ::
+    ::::  /===/gen/project-euler/p1/hoon
       ::
-    :-  %say  |=  *  
+    !:
+    ::
+    :-  %say  |=  *
     :-  %noun
     =<  (sum 1.000)
     ::
-    ::::  ~sivtyv-barnel
-      ::
     |%
     ++  three
       |=  a/@
@@ -97,7 +99,7 @@ Here is the hoon solution (which should be in your pier directory under
 > Really. For a more detailed explanation of when to use spaces vs.
 > gaps, see the syntax section before the first exercises.
 
-### Lines 1-11:
+### Lines 1-13:
 
 Any line that begins with `::` is a comment.
 
@@ -117,7 +119,7 @@ rune takes a specific number of children, either expressions formed by
 other runes or literals that produce their own value (some runes take
 *N* children, and are usually closed with `==`).
 
-For example, the rune `?:` from line 18 is the classic 'if-then-else'
+For example, the rune `?:` from line 20 is the classic 'if-then-else'
 statement, and thus takes three children:
 
       ?:  (lth a b)           ::  if first child evals to true
@@ -166,9 +168,9 @@ You can write:
     :if(=(1 2) 'this is true' 'this is false')
     'this is false'
 
-### Lines 13-35
+### Lines 14-37
 
-Now let's quickly walk through this code line-by-line. Lines 13-35 are
+Now let's quickly walk through this code line-by-line. Lines 15-37 are
 wrapped in a `|%` ('[barcen](../../hoon/twig/bar-core/cen-core/)'), which produces a core. Cores are a
 fundamental datatype in Hoon, similar to a struct, class, or object. A
 core is just a map of names to any kind of code, whether it be functions
