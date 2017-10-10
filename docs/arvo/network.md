@@ -17,16 +17,23 @@ planets, we'll need an app. Let's look at a very simple one:
 
     ::  Accepts any noun from dojo and prints it out
     ::
-    ::::  /hoon/echo/examples/app
+    ::::  /===/app/echo/hoon
       ::
-    /?    314
     !:
-    |_  {bowl state/$~}
+    |%
+    ++  move  {bone card}
+    ++  card  $%  $~
+              ==
+    --
+    ::
+    |_  {bow/bowl $~}                                       ::<  stateless
+    ::
     ++  poke-noun
-      |=  arg/*
-      ^-  {(list) _+>.$}
-      ~&  [%argument arg]
+      |=  non/*
+      ^-  {(list move) _+>.$}
+      ~&  echo+noun+non
       [~ +>.$]
+    ::
     --
 
 This is a very simple app that does only one thing. If you poke it with
@@ -34,14 +41,13 @@ a value, it prints that value out. To try this out, you have to start
 the app, then you can poke it from the command line with the following
 commands:
 
-    ~fintud-macrep:dojo> |start %examples-echo
-    'prep'
+    ~fintud-macrep:dojo> |start %echo
     >=
-    ~fintud-macrep:dojo> :examples-echo 5
-    [%argument 5]
+    ~fintud-macrep:dojo> :echo 5
+    [%echo %noun 5]
     >=
-    ~fintud-macrep:dojo> :examples-echo [1 2]
-    [%argument [1 2]]
+    ~fintud-macrep:dojo> :echo [1 2]
+    [%echo %noun [1 2]]
     >=
 
 > There is currently a bug where the `%argument` lines are printed
@@ -57,7 +63,7 @@ interact with it by sending it messages. The most straightforward way to
 do that is to poke it from the command line, which we we did with
 `:echo 5` (`:[app-name] [argument(s)]`).
 
-In this case, `++poke-noun` takes an argument `arg` and prints it out
+In this case, `++poke-noun` takes an argument `non` and prints it out
 with `~&` ([sigpam](../../hoon/twig/sig-hint/pam-dump/)). This is an unusual
 rune that formally "does nothing", but the interpreter detects it and
 printfs the first child, before executing the second as if the first
@@ -66,7 +72,7 @@ but we'll get to the correct way later on.
 
 But what does `++poke-noun` produce? Recall that `^-` casts to a type.
 In this case, it's declaring that the end result of the function will be of
-type `{(list) _+>.$}`. But what does this mean?
+type `{(list move) _+>.$}`. But what does this mean?
 
 The phrase to remember is "a list of moves and our state". Urbit is a
 message passing system, so whenever we want to do something that
@@ -81,24 +87,43 @@ particular address in our subject where our formal app state is stored.
 It'll become clear why this is later on, but for now pretend that `+>.$`
 is a magic invocation that means "app state".
 
-Let's look at another example (edit your code in
-`/app/examples/echo/hoon` to reflect the code below). Say we want to
+Let's look at another example, this one is in `/app/square.hoon`. Say we want to
 only accept a number, and then print out the square of that number.
 
-    /?    314
+    ::  Accepts an atom from the dojo and squares it.
+    ::
+    ::::  /===/app/square/hoon
+      ::
     !:
-    |_  {bowl state/$~}
+    |%                                                      ::>  no moves in :square
+    ++  move  {bone card}                                   ::>  no cards in :square
+    ++  card  $%  $~
+              ==
+    --
+    ::
+    |_  {bow/bowl $~}                                       ::<  stateless
     ::
     ++  poke-atom
-      |=  arg/@
-      ^-  {(list) _+>.$}
-      ~&  [%square (mul arg arg)]
+      |=  tom/@
+      ^-  {(list move) _+>.$}
+      ~&  square+(mul tom tom)
       [~ +>.$]
+    ::
+    ++  coup
+      |=  {wir/wire err/(unit tang)}
+      ^-  {(list move) _+>.$}
+      ?~  err
+        ~&  square+success+'Poke succeeded!'
+        [~ +>.$]
+      ~&  square+error+'Poke failed. Error:'
+      ~&  square+error+err
+      [~ +>.$]
+    ::
     --
 
 A few things have changed. Firstly, we no longer accept arbitrary nouns
 because we can only square atoms (integers, in this case an unsigned
-one). Thus, our argument is now `arg/@`. Secondly, it's `++poke-atom`
+one). Thus, our argument is now `tom/@`. Secondly, it's `++poke-atom`
 rather than `++poke-noun`.
 
 Intro to marks
@@ -124,9 +149,11 @@ using `&[mark]`. Try the following commands:
 
     ~fintud-macrep:dojo> |start %square
     >=
-    ~fintud-macrep:dojo> :examples-square 6
+
+    ~fintud-macrep:dojo> :square 6
     gall: %square: no poke arm for noun
-    ~fintud-macrep:dojo> :examples-square &atom 6
+
+    ~fintud-macrep:dojo> :square &atom 6
     [%square 36]
     >=
 
@@ -143,46 +170,58 @@ so we'll be getting quite used to them.
 Sending a message to another urbit
 ==================================
 
-Let's write our first network message! Here's `/app/examples/pong.hoon`:
+Let's write our first network message! Here's `/app/pong.hoon`:
 
-    /?    314
-    |%
-      ++  move  {bone term wire *}
-    --
+    ::  Allows one urbit to send the string 'Pong' to
+    ::  another urbit.
+    ::
+    ::::  /===/app/pong/hoon
+      ::
     !:
-    |_  {bowl state/$~}
+    |%
+    ++  move  {bone card}
+    ++  card  $%  {$poke wire dock poke-contents}
+              ==
+    ++  poke-contents  $%  {$atom @}
+                       ==
+    --
+    |_  {bow/bowl $~}                                       ::<  stateless
     ::
     ++  poke-urbit
-      |=  to/@p
+      |=  to/ship
       ^-  {(list move) _+>.$}
-      [[[ost %poke /sending [to dap] %atom 'howdy'] ~] +>.$]
+      ~&  pong+'Outgoing pong!'
+      :_  +>.$
+      ~[[ost.bow %poke /sending [to dap.bow] %atom 'Pong']]
     ::
     ++  poke-atom
-      |=  arg/@
+      |=  tom/@
       ^-  {(list move) _+>.$}
-      ~&  [%receiving (@t arg)]
+      ~&  pong+'Incoming pong!'
+      ~&  pong+received+`@t`tom
       [~ +>.$]
     ::
     ++  coup  |=(* [~ +>.$])
+    ::
     --
 
 Run it with these commands:
 
-    ~fintud-macrep:dojo> |start %examples-pong
+    ~fintud-macrep:dojo> |start %pong
     >=
-    ~fintud-macrep:dojo> :examples-pong &urbit ~sampel-sipnym
+    ~fintud-macrep:dojo> :pong &urbit ~sampel-sipnym
     >=
 
 Replace `~sampel-sipnym` with another urbit. The easiest thing to do is
 to start a comet, a free and disposable Urbit identity. If you don't know
 how to start a comet, see [the user setup section](/docs/using/setup/).
-Don't forget to start the `%examples-pong` app on that urbit, too. You 
+Don't forget to start the `%pong` app on that urbit, too. You
 should see, on the foreign urbit, this output:
 
-    [%receiving 'howdy']
+    [%receiving 'pong']
 
 Most of the code should be straightforward. In `++poke-atom`, the only
-new thing is the expression `(@t arg)`, which is the type `@t` being
+new thing is the expression `@t`tom, which is the type `@t` being
 called as a function with argument `arg`. As we already know, `@t` is
 the type of "cord" text strings. In Hoon, when types are called as
 functions, they serve as a validator function called a "clam" -- that
@@ -204,7 +243,7 @@ state". Until now, we've left the list of moves empty, since we haven't
 wanted to tell Arvo to do anything in particular. Now we want to send a
 message to another urbit. Thus, we produce a list with one element:
 
-    [ost %poke /sending [to-urbit-address %pong] %atom 'howdy']
+    ~[[ost.bow %poke /sending [to dap.bow] %atom 'Pong']]
 
 ### Moves
 
@@ -284,7 +323,7 @@ The move ends with `*` (that is, any noun) since each type of move takes
 different data. In our case, a `%poke` move takes a target (urbit and
 app) and marked data, then pokes the arm of the corresponding mark on
 that app on that urbit with that data. `[to-urbit-address %pong]` is the
-target urbit and app, `%atom` is the `mark`, and`'howdy'` is the data.
+target urbit and app, `%atom` is the `mark`, and`'pong'` is the data.
 
 When Arvo receives a `%poke` move, it calls the appropriate `++poke`.
 The same mechanism is used for sending messages between apps on the same
