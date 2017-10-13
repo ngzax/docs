@@ -11,8 +11,8 @@ State
 In the last section we built a few small apps that sent moves. These
 apps were entirely stateless, however. Most useful apps require some
 amount of state. Let's build a trivial stateful app. It'll keep a
-running the sum of all the atoms we poke it with. Here's
-`app/sum.hoon`:
+running the sum of all the atoms we poke it with. Here's the relevant sections
+of `app/sum.hoon`:
 
     ::  Keeps track of the sum of all the atoms it has been
     ::  poked with and prints the sum out
@@ -32,16 +32,6 @@ running the sum of all the atoms we poke it with. Here's
       ^-  {(list move) _+>.$}
       ~&  sum+(add sum tom)
       [~ +>.$(sum (add sum tom))]
-    ::
-    ++  coup
-      |=  {wir/wire err/(unit tang)}
-      ^-  {(list move) _+>.$}
-      ?~  err
-        ~&  sum+success+'Poke succeeded!'
-        [~ +>.$]
-      ~&  sum+error+'Poke failed. Error:'
-      ~&  sum+error+err
-      [~ +>.$]
     ::
     --
 

@@ -13,62 +13,105 @@ want to subscribe to updates from another app. You could build a
 subscription model out of one-way pokes, but it's such a common pattern
 that it's built into arvo.
 
-Let's take a look at two apps, `:examples-source` and `:examples-sink`.
-First, `:examples-source`:
+et's take a look at two apps, `:source` and `:sink`.
 
-    /?    314
+First, the relevant sections from `:source`:
+
+    ::  Sends subscription updates to sink.hoon
+    ::
+    ::::  /===/app/source/hoon
+      ::
     !:
+    ::
     |%
-    ++  move  {bone $diff mark *}
+    ++  move  {bone card}
+    ++  card  $%  {$diff diff-contents}
+              ==
+    ++  diff-contents  $%  {$noun *}
+                       ==
     --
-    |_  {hid/bowl state/$~}
+    ::
+    |_  {bow/bowl $~}                                       ::<  stateless
+    ::
     ++  poke-noun
-      |=  arg/*
+      |=  non/*
       ^-  {(list move) _+>.$}
       :_  +>.$
-      %+  turn  (prey /example-path hid)
-      |=({o/bone *} `move`[o %diff %noun arg])
+      %+  turn  (prey /example-path bow)
+      |=({o/bone *} [o %diff %noun non])
+    ::
     ++  peer-example-path
       |=  pax/path
       ^-  {(list move) _+>.$}
-      ~&  [%subscribed-to pax=pax]
+      ~&  source+peer-notify+'Someone subscribed to you!'
+      ~&  source+[ship+src.bow path+pax]
       [~ +>.$]
+    ::
     --
 
-And secondly, `:examples-sink`:
+And secondly, `:sink`:
 
-    /?    314
+    ::  Sets up a simple subscription to source.hoon
+    ::
+    ::::  /===/app/sink/hoon
+      ::
+    !:
     |%
     ++  move  {bone card}
-    ++  card
-      $%  {$peer wire {@p term} path}
-          {$pull wire {@p term} $~}
-      ==
+    ++  card  $%  {$peer wire dock path}
+                  {$pull wire dock $~}
+              ==
     --
-    !:
-    |_  {bowl available/?}
+    ::
+    |_  {bow/bowl val/?}                                    ::<  available? (y or n)
+    ::
     ++  poke-noun
-      |=  arg/*
+      |=  non/*
       ^-  {(list move) _+>.$}
-      ?:  &(=(%on arg) available)
-        [[[ost %peer /subscribe [our %source] /example-path] ~] +>.$(available |)]
-      ?:  &(=(%off arg) !available)
-        [[[ost %pull /subscribe [our %source] ~] ~] +>.$(available &)]
-      ~&  ?:(available %not-subscribed %subscribed)
+      ?:  &(=(%on non) val)
+        :_  +>.$(val |)
+        :~  :*  ost.bow
+                %peer
+                /subscribe
+                [our.bow %source]
+                /example-path
+            ==
+        ==
+      ?:  &(=(%off non) !val)
+        :_  +>.$(val &)
+        ~[[ost.bow %pull /subscribe [our.bow %source] ~]]
+      ~&  ?:  val
+            sink+unsubscribed+'You are now unsubscribed!'
+          sink+subscribed+'You are now subscribed!'
       [~ +>.$]
+    ::
     ++  diff-noun
-      |=  {wir/wire arg/*}
+      |=  {wir/wire non/*}
       ^-  {(list move) _+>.$}
-      ~&  [%received-data arg]
+      ~&  sink+received-data+' You got something!'
+      ~&  sink+data+non
       [~ +>.$]
-    ++  reap
-      |=  {wir/wire error/(unit tang)}
+    ::
+    ++  coup
+      |=  {wir/wire err/(unit tang)}
       ^-  {(list move) _+>.$}
-      ?~  error
-        ~&  %successfully-subscribed
+      ?~  err
+        ~&  sink+success+'Poke succeeded!'
         [~ +>.$]
-      ~&  [%subscription-failed error]
+      ~&  sink+error+'Poke failed. Error:'
+      ~&  sink+error+err
       [~ +>.$]
+    ::
+    ++  reap
+      |=  {wir/wire err/(unit tang)}
+      ^-  {(list move) _+>.$}
+      ?~  err
+        ~&  sink+success+'Peer succeeded!'
+        [~ +>.$]
+      ~&  sink+error+'Peer failed. Error:'
+      ~&  sink+error+err
+      [~ +>.$]
+    ::
     --
 
 Cheat sheet:
@@ -121,40 +164,51 @@ Cheat sheet:
 Here's some sample output of the two working together:
 
 
-    ~fintud-macrep:dojo> |start %examples-source
-    >=
-    ~fintud-macrep:dojo> |start %examples-sink
-    >=
-    ~fintud-macrep:dojo> :examples-sink %on
-    [%subscribed-to pax=/example-path]
-    %successfully-subscribed]
-    >=
-    ~fintud-macrep:dojo> :examples-source 5
-    [%received-data 5]
-    >=
-    ~fintud-macrep:dojo> :examples-sink %off
-    >=
-    ~fintud-macrep:dojo> :examples-source 6
-    >=
-    ~fintud-macrep:dojo> :examples-sink %on
-    [%subscribed-to pax=/example-path]
-    %successfully-subscribed]
-    >=
-    ~fintud-macrep:dojo> :examples-source 7
-    [%received-data 7]
+    ~fintud-macrep:dojo> |start %source
     >=
 
-### :examples-source
+    ~fintud-macrep:dojo> |start %sink
+    >=
+
+    ~fintud-macrep:dojo> :sink %on
+    [%source %peer-notify 'Someone subscribed to you!']
+    [%source [%ship ~migsyr-worner-nampex-divper--nortyd-dacwyl-linfur-tarnux] %path /]
+    [%sink %success 'Peer succeeded!']
+    >=
+
+    ~fintud-macrep:dojo> :source 5
+    [%sink %received-data ' You got something!']
+    [%sink %data 5]
+    >=
+
+    ~fintud-macrep:dojo> :sink %off
+    >=
+
+    ~fintud-macrep:dojo> :source 6
+    >=
+
+    ~fintud-macrep:dojo> :sink %on
+    [%source %peer-notify 'Someone subscribed to you!']
+    [%source [%ship ~migsyr-worner-nampex-divper--nortyd-dacwyl-linfur-tarnux] %path /]
+    [%sink %success 'Peer succeeded!']
+    >=
+
+    ~fintud-macrep:dojo> :source 7
+    [%sink %received-data ' You got something!']
+    [%sink %data 7]
+    >=
+
+### :source
 
 Hopefully you can get a sense for what's happening here. When we poke
-`:examples-sink` with `%on`, `:examples-sink` subscribes to
-`:examples-source`, and so whenever we poke `:examples-source`,
-`:examples-sink` gets the update and prints it out. Then we unsubscribe
-by poking `:examples-sink` with `%off`, and `:examples-sink` stops
+`:sink` with `%on`, `:sink` subscribes to
+`:source`, and so whenever we poke `:source`,
+`:sink` gets the update and prints it out. Then we unsubscribe
+by poking `:sink` with `%off`, and `:sink` stops
 getting updates. We then resubscribe.
 
 There's a fair bit going on in this code. Let's look at
-`:examples-source` first.
+`:source` first.
 
 Our definition of `move` is fairly specific, since we're only going to
 sending one kind of move. The `%diff` move is a subscription update, and
@@ -205,12 +259,12 @@ produces `[o %diff %noun arg]`, which is a move that provides bone `o`
 with this subscription update: `[%noun arg]`". This is fairly dense
 code, but what it's doing is straightforward.
 
-### :examples-sink
+### :sink
 
-`:examples-source` should now make sense. `:examples-sink` is a little
+`:source` should now make sense. `:sink` is a little
 longer, but not much more complicated.
 
-In `:examples-sink`, our definition of of `++move` is different. All
+In `:sink`, our definition of of `++move` is different. All
 moves start with a `bone`, and we conventionally refer to the second
 half as the "card", so that we can say a move is an action that sends a
 card along a bone.
@@ -225,21 +279,21 @@ cancel any subscriptions coming over this duct. If your bone and wire
 are the same as when you subscribed, then the cancellation will happen
 correctly.
 
-The only state we need for `:examples-sink` is a boolean to indicate
-whether we're already subscribed to `:examples-source`. We use
+The only state we need for `:sink` is a boolean to indicate
+whether we're already subscribed to `:source`. We use
 `available/?`, where `?` is the sign of type boolean (similar to `*`,
 `@`), which defaults to true (that is, `0`).
 
 In `++poke-noun` we check our input to see both if it's `%on` and we're
 available. If so, we produce the move to subscribe to
-`:examples-source`:
+`:source`:
 
     [ost %peer /subscribe [our %source] /example-path]
 
 Also, we set available to false (`|`) with `+>.$(available |)`.
 
 Otherwise, if our input is `%off` and we're already subscribed (i.e.
-`available` is false), then we unsubscribe from `:examples-source`:
+`available` is false), then we unsubscribe from `:source`:
 
     [ost %pull /subscribe [our %source] ~]
 
